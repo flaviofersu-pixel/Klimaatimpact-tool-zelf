@@ -52,6 +52,8 @@ const SCHERMEN = [
   { pad: '/dashboard', naam: 'Dashboard' },
   { pad: '/grootste-bestanden', naam: 'Grootste bestanden' },
   { pad: '/per-map', naam: 'Per map' },
+  { pad: '/opruimen', naam: 'Oude bestanden' },
+  { pad: '/resultaat', naam: 'Resultaat' },
   { pad: '/zo-rekenen-we', naam: 'Zo rekenen we' },
 ];
 

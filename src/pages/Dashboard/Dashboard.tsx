@@ -62,9 +62,10 @@ export function Dashboard() {
       <LeeftijdKaart groepen={analyse.perLeeftijd} />
 
       <div className={styles.knoppen}>
-        <Button appearance="primary" onClick={() => navigate('/grootste-bestanden')}>
-          Grootste bestanden en soorten
+        <Button appearance="primary" onClick={() => navigate('/opruimen')}>
+          Oude bestanden bekijken
         </Button>
+        <Button onClick={() => navigate('/grootste-bestanden')}>Grootste bestanden en soorten</Button>
         <Button onClick={() => navigate('/per-map')}>Bestanden per map</Button>
         <Button onClick={() => navigate('/zo-rekenen-we')}>Zo rekenen we</Button>
       </div>

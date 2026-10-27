@@ -323,3 +323,66 @@ startScan:
 ### Oefening
 
 Open `src/graph/graph.test.ts` en schrijf een test voor deze situatie: de eerste pagina geeft 503 zonder Retry-After, daarna komt de pagina wel. Hoe vaak is de nep-fetch aangeroepen en met welke wachttijd is `wachtFunctie` aangeroepen? Bedenk het antwoord eerst, en draai dan `npm test`.
+
+---
+
+## Fase 6: Opruimen en resultaat
+
+### Plan
+
+De open beslissing over verwijderen staat nog open in CLAUDE.md. Dus: **versie met alleen lezen.** De tool verwijdert niets en vraagt nergens `Files.ReadWrite`; `graph/opruimen.ts` blijft een stub.
+
+1. `src/model/opruimen.ts` (puur, met tests): `kiesOudeBestanden()`, `sorteerBestanden()` en `berekenBesparing()`.
+2. `src/config/links.ts`: de link naar de bewaarregels op één plek, zodat het team die makkelijk kan vervangen door de intranetpagina van de gemeente.
+3. `ScanContext`: de `Opruimselectie` (gekozen id's en besparing) en de lijst oude bestanden. De selectie begint leeg bij elke nieuwe scan.
+4. Opruimen-scherm: melding over bewaartermijnen met link, tabel met bestanden ouder dan een half jaar, te sorteren en te selecteren, 100 per keer met "Meer tonen".
+5. `BevestigDialoog`: legt uit dat de tool niets verwijdert, toont de gekozen bestanden als links "Openen in OneDrive", en legt uit dat verwijderen in OneDrive eerst naar de prullenbak gaat.
+6. Resultaat-scherm: mogelijke besparing als bandbreedte, plus tips.
+7. Kopbalk en Dashboard: links naar Opruimen en Resultaat.
+
+Woorden als "mag weg", "overbodig" of "onnodig" gebruik ik nergens.
+
+### Wat er gebouwd is
+
+- **Oude bestanden** (scherm 8): bovenaan een gele melding over bewaartermijnen met een link naar de regels. Daaronder alle bestanden die langer dan een half jaar niet zijn gewijzigd. Klik op een kolomkop om te sorteren (nog een keer klikken draait de volgorde om). Vink bestanden aan; het vinkje in de kop kiest alle getoonde rijen. Er staan 100 rijen per keer op het scherm, met "Meer tonen". Onderaan blijft een samenvatting in beeld met het aantal gekozen bestanden en de mogelijke besparing.
+- **BevestigDialoog** (scherm 9): zegt dat de tool niets verwijdert, toont de gekozen bestanden als links naar OneDrive (nieuw tabblad), en legt uit dat verwijderen in OneDrive eerst naar de prullenbak gaat.
+- **Resultaat** (scherm 10): mogelijke besparing van de keuze als "van ... tot ...", naast de impact van alles, plus vijf tips.
+
+Getest in de browser met voorbeelddata: twee bestanden aanvinken, dialoog openen, naar resultaat (2,7 GB, van 0,0074 tot 0,19 kg CO₂ per jaar).
+
+### Welke bestanden
+
+| Bestand | Wat het doet |
+| --- | --- |
+| `src/model/opruimen.ts` | `kiesOudeBestanden()`, `sorteerBestanden()`, `berekenBesparing()`. Met tests. |
+| `src/config/links.ts` | `BEWAARREGELS_URL`. Nu de Archiefwet 1995 op wetten.overheid.nl. **TODO team:** vervang door de intranetpagina met de selectielijst. |
+| `src/state/ScanContext.tsx` | `oudeBestanden`, `selectie` (een `Opruimselectie`) en `kiesBestanden()`. |
+| `src/pages/Opruimen/Opruimen.tsx` | Melding, tabel met sorteren en selecteren, samenvatting. |
+| `src/pages/Opruimen/BevestigDialoog.tsx` | Fluent `Dialog` met uitleg en links. |
+| `src/pages/Resultaat/Resultaat.tsx` | Besparing en tips. |
+
+### Hoe het samenwerkt
+
+```
+ScanContext
+  gekozen (useState: lijst met id's)
+  oudeBestanden = kiesOudeBestanden(scan.bestanden, scanMoment)          (useMemo)
+  selectie      = { gekozen, verwijderd: [], besparing: berekenBesparing(...) }  (useMemo)
+
+Opruimen:  vinkje -> kiesBestanden([...]) -> gekozen verandert -> selectie opnieuw berekend
+Resultaat: leest dezelfde selectie -> ImpactKaart "Mogelijke besparing"
+```
+
+De selectie staat in de context en niet in het Opruimen-scherm zelf. Daardoor blijft je keuze bewaard als je naar Resultaat gaat en weer terug. De sortering en "Meer tonen" horen alleen bij het scherm; die staan daarom gewoon in `useState` van het Opruimen-scherm.
+
+`verwijderd` blijft een lege lijst, want deze versie leest alleen. Kiest het team later wél voor verwijderen, dan komt dat in `graph/opruimen.ts`, met `Files.ReadWrite` en een aangepaste dialoog.
+
+### Drie dingen om zelf te begrijpen
+
+1. **Gecontroleerde vinkjes.** Een vinkje weet zelf niet of het aan staat. Wij zeggen het met `checked={gekozenIds.has(bestand.id)}`, en bij een klik passen we de lijst aan. React tekent het vinkje daarna opnieuw. Zo is er één waarheid: de lijst `gekozen`.
+2. **Een `Set` om snel te zoeken.** `gekozenIds.has(id)` is snel, ook bij duizenden bestanden. `selectie.gekozen.includes(id)` zou bij elke rij de hele lijst doorlopen.
+3. **Woorden doen ertoe.** De tool zegt nooit dat iets "weg kan". Een oud bestand kan nog steeds bewaard moeten worden (Archiefwet). Daarom heet het scherm "Oude bestanden bekijken" en beslist de medewerker zelf, in OneDrive.
+
+### Oefening
+
+Verander in `src/model/opruimen.ts` `OUD_VANAF_MAANDEN` van 6 naar 12. Hoeveel bestanden staan er dan in de voorbeelddata op het scherm Oude bestanden? Welke test faalt nu, en past de tekst op het scherm ("langer dan een half jaar") nog? Zet het daarna terug.

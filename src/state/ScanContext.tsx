@@ -9,7 +9,8 @@ import { scanDrive } from '../graph/scan';
 import { maakAnalyse } from '../model/analyse';
 import { rekenConfig } from '../model/config';
 import { naarBestanden } from '../model/naarBestand';
-import type { Bestand, ScanResultaat } from '../model/types';
+import { berekenBesparing, kiesOudeBestanden } from '../model/opruimen';
+import type { Bestand, Opruimselectie, ScanResultaat } from '../model/types';
 import { ScanContext, type ScanContextWaarde } from './scanContextWaarde';
 
 // Fouten van MSAL hebben een errorCode; die vertalen we als inlogfout, de rest als scanfout.
@@ -29,6 +30,9 @@ export function ScanProvider({ children }: { children: ReactNode }) {
   // Hiermee kunnen we een lopende scan annuleren. Een ref, want het hoeft het scherm niet te verversen.
   const annuleerder = useRef<AbortController | null>(null);
 
+  // Id's van de bestanden die de medewerker op het Opruimen-scherm heeft aangevinkt.
+  const [gekozen, setGekozen] = useState<string[]>([]);
+
   // De analyse wordt alleen opnieuw berekend als het scanresultaat verandert.
   const analyse = useMemo(() => {
     if (scan?.status !== 'klaar') {
@@ -37,10 +41,25 @@ export function ScanProvider({ children }: { children: ReactNode }) {
     return maakAnalyse(scan.bestanden, scan.quota, rekenConfig, scanMoment);
   }, [scan, scanMoment]);
 
+  const oudeBestanden = useMemo(() => {
+    if (scan?.status !== 'klaar') {
+      return [];
+    }
+    return kiesOudeBestanden(scan.bestanden, scanMoment);
+  }, [scan, scanMoment]);
+
+  // Alleen lezen (open beslissing in CLAUDE.md): de tool verwijdert niets, dus "verwijderd" blijft leeg.
+  const selectie: Opruimselectie = useMemo(
+    () => ({ gekozen, verwijderd: [], besparing: berekenBesparing(oudeBestanden, gekozen, rekenConfig) }),
+    [gekozen, oudeBestanden],
+  );
+
   // Stopt een lopende scan zonder melding. Die scan is daarna niet meer "actueel" en verandert niets meer.
+  // Ook de keuze van de vorige scan vervalt.
   function stopVorigeScan() {
     annuleerder.current?.abort();
     annuleerder.current = null;
+    setGekozen([]);
   }
 
   function laadVoorbeelddata() {
@@ -113,6 +132,9 @@ export function ScanProvider({ children }: { children: ReactNode }) {
     scan,
     analyse,
     isVoorbeeld,
+    oudeBestanden,
+    selectie,
+    kiesBestanden: setGekozen,
     laadVoorbeelddata,
     startScan: () => void startScan(),
     annuleerScan,

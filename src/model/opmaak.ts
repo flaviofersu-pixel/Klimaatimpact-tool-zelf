@@ -40,7 +40,7 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatBandbreedte(bandbreedte: Bandbreedte, eenheid: string): string {
-  // Zijn laag en hoog allebei heel klein, dan is "van bijna 0 tot bijna 0" overbodig.
+  // Zijn laag en hoog allebei heel klein, dan zeggen we gewoon "bijna 0" in plaats van "van bijna 0 tot bijna 0".
   if (Math.abs(bandbreedte.hoog) < GRENS_BIJNA_NUL) {
     return `bijna 0 ${eenheid}`;
   }
