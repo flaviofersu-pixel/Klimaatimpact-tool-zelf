@@ -13,6 +13,11 @@ const useStyles = makeStyles({
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
     backgroundColor: tokens.colorBrandBackground,
     color: tokens.colorNeutralForegroundOnBrand,
+    // Duidelijke witte focusrand voor wie met Tab door de balk gaat (de standaardrand valt weg op blauw)
+    '& a:focus-visible': {
+      outline: `2px solid ${tokens.colorNeutralForegroundOnBrand}`,
+      outlineOffset: '2px',
+    },
   },
   naam: {
     color: tokens.colorNeutralForegroundOnBrand,

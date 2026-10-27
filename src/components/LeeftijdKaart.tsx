@@ -1,6 +1,6 @@
 // Kaart die laat zien hoeveel opslag nieuw, een half jaar of meer dan een jaar oud is.
 import { Card, CardHeader, Field, makeStyles, ProgressBar, Text, tokens } from '@fluentui/react-components';
-import { formatBandbreedte, formatBytes } from '../model/opmaak';
+import { formatAantal, formatBandbreedte, formatBytes } from '../model/opmaak';
 import type { Groep } from '../model/types';
 
 const useStyles = makeStyles({
@@ -36,7 +36,7 @@ export function LeeftijdKaart({ groepen }: Props) {
           return (
             <Field
               key={groep.naam}
-              label={`${groep.naam}: ${groep.aantal} bestanden, ${formatBytes(groep.impact.bytes)}`}
+              label={`${groep.naam}: ${formatAantal(groep.aantal, 'bestand', 'bestanden')}, ${formatBytes(groep.impact.bytes)}`}
               hint={formatBandbreedte(groep.impact.kgCo2PerJaar, 'kg CO₂ per jaar')}
             >
               <ProgressBar value={aandeel} thickness="large" />

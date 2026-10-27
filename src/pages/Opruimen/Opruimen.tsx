@@ -23,7 +23,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { GeenScan } from '../../components/GeenScan';
 import { BEWAARREGELS_URL } from '../../config/links';
-import { formatBandbreedte, formatBytes, formatDatum } from '../../model/opmaak';
+import { formatAantal, formatBandbreedte, formatBytes, formatDatum } from '../../model/opmaak';
 import { sorteerBestanden, type SorteerKolom, type SorteerRichting } from '../../model/opruimen';
 import { useScan } from '../../state/useScan';
 import { BevestigDialoog } from './BevestigDialoog';
@@ -143,14 +143,16 @@ export function Opruimen() {
       </MessageBar>
 
       <Card className={styles.kaart}>
-        <Body1>
-          Deze {oudeBestanden.length} bestanden zijn langer dan een half jaar niet gewijzigd. Kies welke je in OneDrive
-          wilt bekijken.
-        </Body1>
-
         {oudeBestanden.length === 0 ? (
           <Body1>Je hebt geen bestanden die langer dan een half jaar niet zijn gewijzigd.</Body1>
         ) : (
+          <Body1>
+            {formatAantal(oudeBestanden.length, 'bestand is', 'bestanden zijn')} langer dan een half jaar niet
+            gewijzigd. Kies wat je in OneDrive wilt bekijken.
+          </Body1>
+        )}
+
+        {oudeBestanden.length > 0 && (
           <div className={styles.schuifvlak}>
             <Table sortable aria-label="Bestanden ouder dan een half jaar" className={styles.tabel}>
               <TableHeader>
@@ -204,7 +206,7 @@ export function Opruimen() {
         <Body1 role="status">
           {gekozenBestanden.length === 0
             ? 'Je hebt nog geen bestanden gekozen.'
-            : `Gekozen: ${gekozenBestanden.length} bestanden, samen ${formatBytes(selectie.besparing.bytes)}. Staan ze niet meer in OneDrive, dan scheelt dat ${formatBandbreedte(selectie.besparing.kgCo2PerJaar, 'kg CO₂ per jaar')}.`}
+            : `Gekozen: ${formatAantal(gekozenBestanden.length, 'bestand', 'bestanden')}, samen ${formatBytes(selectie.besparing.bytes)}. Staan ze niet meer in OneDrive, dan scheelt dat ${formatBandbreedte(selectie.besparing.kgCo2PerJaar, 'kg CO₂ per jaar')}.`}
         </Body1>
         <div className={styles.knoppen}>
           <Button appearance="primary" disabled={gekozenBestanden.length === 0} onClick={() => setDialoogOpen(true)}>

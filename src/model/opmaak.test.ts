@@ -1,6 +1,6 @@
 // Tests voor het netjes tonen van getallen en bytes.
 import { describe, expect, it } from 'vitest';
-import { formatBandbreedte, formatBytes, formatExact, formatGetal } from './opmaak';
+import { formatAantal, formatBandbreedte, formatBytes, formatExact, formatGetal, kiesEenheid } from './opmaak';
 
 describe('formatBytes', () => {
   it.each([
@@ -29,6 +29,22 @@ describe('formatExact', () => {
   it('rondt niet af', () => {
     expect(formatExact(1.185)).toBe('1,185');
     expect(formatExact(8760)).toBe('8.760'); // met duizendtalpunt
+  });
+});
+
+describe('kiesEenheid', () => {
+  it('kiest de grootste eenheid waarin het getal minstens 1 is', () => {
+    expect(kiesEenheid(500)).toEqual({ eenheid: 'bytes', deler: 1 });
+    expect(kiesEenheid(123_456)).toEqual({ eenheid: 'kB', deler: 1000 });
+    expect(kiesEenheid(8.5e9)).toEqual({ eenheid: 'GB', deler: 1e9 });
+  });
+});
+
+describe('formatAantal', () => {
+  it('kiest enkelvoud of meervoud en zet een punt bij duizendtallen', () => {
+    expect(formatAantal(0, 'bestand', 'bestanden')).toBe('0 bestanden');
+    expect(formatAantal(1, 'bestand', 'bestanden')).toBe('1 bestand');
+    expect(formatAantal(12345, 'bestand', 'bestanden')).toBe('12.345 bestanden');
   });
 });
 

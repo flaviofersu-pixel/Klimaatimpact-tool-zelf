@@ -13,7 +13,7 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { BEWAARREGELS_URL } from '../../config/links';
-import { formatBytes } from '../../model/opmaak';
+import { formatAantal, formatBytes } from '../../model/opmaak';
 import type { Bestand } from '../../model/types';
 
 const useStyles = makeStyles({
@@ -52,8 +52,9 @@ export function BevestigDialoog({ open, bestanden, onSluiten, onNaarResultaat }:
           <DialogTitle>Gekozen bestanden bekijken in OneDrive</DialogTitle>
           <DialogContent className={styles.inhoud}>
             <Body1>
-              De tool verwijdert zelf niets. Hieronder staan de {bestanden.length} bestanden die je hebt gekozen. Open ze
-              in OneDrive en beslis daar zelf wat je ermee doet.
+              De tool verwijdert zelf niets. Hieronder staat wat je hebt gekozen (
+              {formatAantal(bestanden.length, 'bestand', 'bestanden')}). Open het in OneDrive en beslis daar zelf wat je
+              ermee doet.
             </Body1>
             <Body1>
               Verwijder je een bestand in OneDrive, dan gaat het eerst naar de prullenbak. Pas als de prullenbak is

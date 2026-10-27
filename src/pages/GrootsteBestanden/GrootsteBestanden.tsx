@@ -33,7 +33,7 @@ export function GrootsteBestanden() {
       </Card>
 
       <Card className={styles.kaart}>
-        <Title3 as="h2">De {analyse.grootste.length} grootste bestanden</Title3>
+        <Title3 as="h2">Je grootste bestanden</Title3>
         <BestandenTabel bestanden={analyse.grootste} beschrijving="Grootste bestanden" />
       </Card>
     </>

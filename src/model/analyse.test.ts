@@ -102,6 +102,34 @@ describe('maakAnalyse', () => {
     expect(bestanden.map((bestand) => bestand.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 
+  it('werkt met één bestand', () => {
+    const een = maakAnalyse([bestanden[0]], quota, rekenConfig, nu);
+
+    expect(een.totaal.bytes).toBe(100);
+    expect(een.perSoort).toHaveLength(1);
+    expect(een.grootste).toHaveLength(1);
+  });
+
+  it('telt een bestand zonder grootte (0 bytes) wel mee in het aantal', () => {
+    const leeg = maakBestand({ id: 'leeg', grootte: 0 });
+    const analyseMetLeeg = maakAnalyse([leeg], undefined, rekenConfig, nu);
+
+    expect(analyseMetLeeg.perSoort[0].aantal).toBe(1);
+    expect(analyseMetLeeg.totaal.bytes).toBe(0);
+  });
+
+  it('kan 100.000 bestanden aan', () => {
+    const veel = Array.from({ length: 100_000 }, (_, i) =>
+      maakBestand({ id: `b${i}`, grootte: i, map: `/Map ${i % 50}`, gewijzigdOp: new Date(2020, 0, 1 + (i % 2000)) }),
+    );
+    const start = performance.now();
+    const groot = maakAnalyse(veel, quota, rekenConfig, nu);
+
+    expect(groot.perMap).toHaveLength(50);
+    expect(groot.grootste[0].grootte).toBe(99_999);
+    expect(performance.now() - start).toBeLessThan(2000); // ruim; in de praktijk een fractie daarvan
+  });
+
   it('werkt met een lege OneDrive en zonder quota', () => {
     const leeg = maakAnalyse([], undefined, rekenConfig, nu);
 

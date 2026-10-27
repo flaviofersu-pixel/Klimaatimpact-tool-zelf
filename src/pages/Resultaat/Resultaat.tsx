@@ -3,6 +3,7 @@ import { Body1, Button, Card, makeStyles, Title1, Title3, tokens } from '@fluent
 import { useNavigate } from 'react-router';
 import { GeenScan } from '../../components/GeenScan';
 import { ImpactKaart } from '../../components/ImpactKaart';
+import { formatAantal } from '../../model/opmaak';
 import { useScan } from '../../state/useScan';
 
 const useStyles = makeStyles({
@@ -58,7 +59,7 @@ export function Resultaat() {
           <ImpactKaart
             titel="Mogelijke besparing"
             impact={selectie.besparing}
-            toelichting={`Als de ${aantalGekozen} gekozen bestanden niet meer in OneDrive staan, en ook niet meer in de prullenbak.`}
+            toelichting={`Als wat je hebt gekozen (${formatAantal(aantalGekozen, 'bestand', 'bestanden')}) niet meer in OneDrive staat, en ook niet meer in de prullenbak.`}
           />
         ) : (
           <Card className={styles.kaart}>

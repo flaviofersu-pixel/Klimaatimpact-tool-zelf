@@ -25,18 +25,23 @@ export function formatExact(getal: number): string {
   return getal.toLocaleString('nl-NL', { maximumFractionDigits: 10 });
 }
 
-// Bytes decimaal (1 kB = 1000 bytes), net als het rekenmodel.
+// De grootste eenheid waarin het getal nog minstens 1 is. Decimaal (1 kB = 1000 bytes), net als het rekenmodel.
+export function kiesEenheid(bytes: number): { eenheid: string; deler: number } {
+  let deler = 1;
+  let index = 0;
+  while (bytes / deler >= 1000 && index < EENHEDEN.length - 1) {
+    deler = deler * 1000;
+    index++;
+  }
+  return { eenheid: EENHEDEN[index], deler };
+}
+
 export function formatBytes(bytes: number): string {
-  let waarde = bytes;
-  let eenheid = 0;
-  while (waarde >= 1000 && eenheid < EENHEDEN.length - 1) {
-    waarde = waarde / 1000;
-    eenheid++;
+  const { eenheid, deler } = kiesEenheid(bytes);
+  if (deler === 1) {
+    return `${bytes} bytes`;
   }
-  if (eenheid === 0) {
-    return `${waarde} bytes`;
-  }
-  return `${waarde.toLocaleString('nl-NL', { maximumFractionDigits: 1 })} ${EENHEDEN[eenheid]}`;
+  return `${(bytes / deler).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} ${eenheid}`;
 }
 
 export function formatBandbreedte(bandbreedte: Bandbreedte, eenheid: string): string {
@@ -45,6 +50,11 @@ export function formatBandbreedte(bandbreedte: Bandbreedte, eenheid: string): st
     return `bijna 0 ${eenheid}`;
   }
   return `van ${formatGetal(bandbreedte.laag)} tot ${formatGetal(bandbreedte.hoog)} ${eenheid}`;
+}
+
+// "1 bestand", "2 bestanden", "12.345 bestanden".
+export function formatAantal(aantal: number, enkelvoud: string, meervoud: string): string {
+  return `${aantal.toLocaleString('nl-NL')} ${aantal === 1 ? enkelvoud : meervoud}`;
 }
 
 export function formatDatum(datum: Date): string {

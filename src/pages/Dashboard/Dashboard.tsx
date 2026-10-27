@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { GeenScan } from '../../components/GeenScan';
 import { ImpactKaart } from '../../components/ImpactKaart';
 import { LeeftijdKaart } from '../../components/LeeftijdKaart';
-import { formatBytes } from '../../model/opmaak';
+import { formatAantal, formatBytes } from '../../model/opmaak';
 import { useScan } from '../../state/useScan';
 
 const useStyles = makeStyles({
@@ -35,13 +35,13 @@ export function Dashboard() {
     <>
       <Title1 as="h1">Jouw OneDrive</Title1>
 
-      {quota && (
+      {quota && quota.total > 0 && (
         <Card>
           <Field
             label={`Je gebruikt ${formatBytes(quota.used)} van ${formatBytes(quota.total)}`}
-            hint={`${scan.bestanden.length} bestanden bekeken`}
+            hint={`${formatAantal(scan.bestanden.length, 'bestand', 'bestanden')} bekeken`}
           >
-            <ProgressBar value={quota.total > 0 ? quota.used / quota.total : 0} thickness="large" />
+            <ProgressBar value={quota.used / quota.total} thickness="large" />
           </Field>
         </Card>
       )}

@@ -386,3 +386,79 @@ De selectie staat in de context en niet in het Opruimen-scherm zelf. Daardoor bl
 ### Oefening
 
 Verander in `src/model/opruimen.ts` `OUD_VANAF_MAANDEN` van 6 naar 12. Hoeveel bestanden staan er dan in de voorbeelddata op het scherm Oude bestanden? Welke test faalt nu, en past de tekst op het scherm ("langer dan een half jaar") nog? Zet het daarna terug.
+
+---
+
+## Fase 7: Kwaliteit en privacy-check
+
+### Plan
+
+1. Privacy: zoeken naar `localStorage`, `sessionStorage`, IndexedDB, cookies, `console.*` en URL's buiten Microsoft, in de code én in het netwerkverkeer van de browser. Lijst van bevindingen en aanpassingen.
+2. Laagindeling: `fetch` buiten `src/graph/`? MSAL of TeamsJS buiten `src/auth/`? React of netwerk in `src/model/`?
+3. Deze regels vastleggen in `eslint.config.js`, zodat `npm run lint` een fout geeft als iemand ze later breekt.
+4. Toegankelijkheid: toetsenbord, zichtbare focus, labels, tekstalternatief voor grafieken, een link "Naar de inhoud".
+5. Randgevallen: lege OneDrive, één bestand, heel veel bestanden, bestanden zonder grootte.
+6. Smal scherm (400 px): elke pagina meten op horizontaal scrollen.
+7. `README.md` schrijven.
+
+### Wat er gevonden en aangepast is
+
+**1. Privacy**
+
+| Gezocht naar | Gevonden | Actie |
+| --- | --- | --- |
+| `localStorage`, `sessionStorage`, IndexedDB, cookies | Niets in onze code. MSAL bewaart zijn tokens in `sessionStorage`; zo is het in CLAUDE.md afgesproken. In de browsertest was `localStorage` leeg en waren er geen cookies. | ESLint-regel toegevoegd: gebruik geeft voortaan een fout. |
+| `console.log` met gegevens | Niets. | ESLint-regel `no-console`. |
+| URL's buiten Microsoft | Alleen links waarop de gebruiker klikt: de Archiefwet op wetten.overheid.nl en de `webUrl` van eigen OneDrive-bestanden. Geen scripts, fonts of verzoeken van buiten. De browsertest heeft op alle schermen **geen enkel extern verzoek** gezien (alleen localhost). | `graphGet()` weigert al URL's buiten `graph.microsoft.com`. |
+
+**2. Laagindeling**
+
+| Regel | Gevonden | Actie |
+| --- | --- | --- |
+| Alleen `src/graph/` gebruikt `fetch` | Klopt. | ESLint-regel. |
+| Alleen `src/auth/` gebruikt MSAL/TeamsJS | Klopt (`App.tsx` en `main.tsx` gebruiken het eigen type `MsalInstantie` uit `auth/msal.ts`). | ESLint-regel. |
+| `src/model/` is puur | Klopt: alleen types uit `graph/types.ts`. | ESLint-regel: React, Fluent, Recharts en de rest van `graph/` zijn verboden in `model/`. |
+
+Getest met een proefbestand vol overtredingen: ESLint gaf 8 fouten, met de uitleg uit `eslint.config.js`. Daarna weer verwijderd.
+
+**3. Toegankelijkheid**
+
+- Nieuw: link **Naar de inhoud** (de eerste Tab-stop), zodat je met het toetsenbord niet steeds door de kopbalk hoeft.
+- Nieuw: elke pagina zet een eigen titel in het tabblad ("Dashboard - KlimaatImpactTool").
+- Nieuw: een witte focusrand voor links in de blauwe kopbalk (de standaardrand viel weg tegen het blauw).
+- Al aanwezig en getest: alles bereikbaar met Tab, knoppen met Enter, vinkjes met de spatiebalk, elk vinkje met een eigen label ("Export 4.zip kiezen"). De Fluent-dialoog houdt de focus vast en sluit met Escape.
+- De grafiek heeft een tekstalternatief voor schermlezers, en dezelfde cijfers staan in de tabel eronder.
+- De groei-animatie van de grafiek staat uit: rustiger, en screenshots en voorlezen kloppen meteen.
+- Voortgang en selectie staan in een `role="status"`, zodat een schermlezer veranderingen voorleest.
+
+**4. Randgevallen**
+
+Getest door in de browsertest de voorbeelddata te vervangen door een lege OneDrive, één bestand, en een bestand zonder grootte. Geen crashes. Aangepast:
+
+- "1 bestanden" werd "1 bestand" (nieuwe functie `formatAantal()`, ook met duizendtalpunt: "12.345 bestanden").
+- De grafiekas toonde "0 GB 0 GB" bij kleine bestanden. Nu kiest de as zelf een eenheid (`kiesEenheid()`).
+- Lege OneDrive: geen lege grafiek meer, en de opslagkaart verschijnt alleen als het totaal bekend is.
+- Nieuwe tests: één bestand, een bestand zonder grootte (telt mee als 0 bytes), en 100.000 bestanden (analyse binnen 2 seconden; in de praktijk veel sneller). Het Opruimen-scherm toont 100 rijen per keer, zodat de pagina ook bij duizenden oude bestanden snel blijft.
+
+**5. Smal scherm (400 px)**
+
+Alle negen schermen gemeten: nergens is de pagina breder dan 400 px. De kopbalk loopt door over meer regels. Brede tabellen schuiven binnen hun eigen kader opzij.
+
+**6. README.md** beschrijft wat de tool doet, hoe je hem start en hoe je `.env` invult (met de redirect-URI `/redirect.html`).
+
+### Bekende punten voor later
+
+- `npm run build` waarschuwt dat het JavaScript-bestand groter is dan 500 kB (vooral Fluent UI, Recharts en MSAL). De app werkt prima; de schermen opsplitsen met `lazy()` kan later.
+- `BEWAARREGELS_URL` in `src/config/links.ts` wijst nog naar de Archiefwet. Vervang hem door de intranetpagina van de gemeente.
+- De scan met een echt account is nog niet getest (er was geen client-id).
+- `docs/ontwerp/` is leeg. Komen de Figma-exports erbij, dan kunnen de schermen dichter naar het ontwerp.
+
+### Drie dingen om zelf te begrijpen
+
+1. **Regels in de linter.** Een afspraak in een document vergeet je. Een regel in `eslint.config.js` geeft meteen een fout, ook bij een nieuw teamlid. Zo bewaakt `npm run lint` de harde regels uit CLAUDE.md.
+2. **Testen met randgevallen.** Bugs zitten vaak bij 0, 1 en "heel veel". Daarom: lege OneDrive, één bestand, 100.000 bestanden.
+3. **Toegankelijk is ook gewoon fijn.** Een tabbladtitel per pagina, een duidelijke focusrand en een rustige grafiek zonder animatie helpen iedereen, niet alleen mensen met een schermlezer.
+
+### Oefening
+
+Zet in `src/pages/Dashboard/Dashboard.tsx` tijdelijk de regel `localStorage.setItem('test', 'x');` in de functie `Dashboard` en draai `npm run lint`. Welke melding krijg je, en in welk deel van `eslint.config.js` staat die tekst? Haal de regel daarna weer weg.

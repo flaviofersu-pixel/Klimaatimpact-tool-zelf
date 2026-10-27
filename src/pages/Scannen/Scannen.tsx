@@ -15,7 +15,7 @@ import {
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../auth/useAuth';
-import { formatBytes } from '../../model/opmaak';
+import { formatAantal, formatBytes } from '../../model/opmaak';
 import { useScan } from '../../state/useScan';
 
 const useStyles = makeStyles({
@@ -93,7 +93,7 @@ export function Scannen() {
             : 'Opslag van je OneDrive ophalen...'}
         </Body1>
         {/* role="status": schermlezers lezen het aantal gelezen bestanden voor als het verandert */}
-        <Field label={<span role="status">{scan.gelezen} bestanden gelezen</span>}>
+        <Field label={<span role="status">{formatAantal(scan.gelezen, 'bestand', 'bestanden')} gelezen</span>}>
           <ProgressBar thickness="large" />
         </Field>
         <Body1>Bij veel bestanden duurt dit een paar minuten. Je kunt dit tabblad open laten staan.</Body1>
