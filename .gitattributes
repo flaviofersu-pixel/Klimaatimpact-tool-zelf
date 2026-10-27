@@ -1,0 +1,3 @@
+# Regeleinden in de repo altijd LF, ook op Windows
+* text=auto eol=lf
+*.png binary
