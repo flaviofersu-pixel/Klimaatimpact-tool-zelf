@@ -263,3 +263,63 @@ Later (fase 5) roept de scan `useToken()` aan. Die probeert eerst `acquireTokenS
 ### Oefening
 
 Open de app zonder `.env` en kijk naar het Privacy-scherm. Maak daarna een `.env` met een verzonnen id, bijvoorbeeld `VITE_CLIENT_ID=11111111-2222-3333-4444-555555555555`, en start `npm run dev` opnieuw. Wat verandert er, en wat laat Microsoft zien als je op Inloggen klikt? Waarom moet je de dev-server opnieuw starten nadat je `.env` hebt aangepast?
+
+---
+
+## Fase 5: De echte scan via Microsoft Graph
+
+### Plan
+
+1. `src/graph/client.ts`: `graphGet()` doet `fetch` met het token. Bij 429 en 503 wachten op `Retry-After` (standaard 10 seconden) en opnieuw proberen, maximaal 5 keer. Andere fouten worden een `GraphFout` met status en foutcode. Accepteert alleen URL's van `graph.microsoft.com`.
+2. `src/graph/drive.ts`: `getQuota()`.
+3. `src/graph/scan.ts`: `scanDrive()` met delta en de `$select` uit CLAUDE.md, pagina voor pagina via `@odata.nextLink`, met een callback na elke pagina.
+4. `src/graph/foutmelding.ts`: Graph-fouten in gewone taal (geen OneDrive, geen toestemming, verbinding weg, geannuleerd).
+5. Tests met een nep-`fetch`, zodat er geen echt netwerk nodig is.
+6. `ScanContext`: `startScan()` en `annuleerScan()`. Na de scan rekent de context de Analyse uit, en het Scannen-scherm gaat naar het Dashboard.
+7. Scannen-scherm: totale opslag zodra die binnen is, voortgang met het aantal gelezen bestanden, knop Annuleren, en foutmeldingen met "Opnieuw proberen".
+8. Privacy-scherm: na inloggen meteen de scan starten.
+
+### Wat er gebouwd is
+
+De echte scan. Na het inloggen op het Privacy-scherm start de scan meteen en ga je naar het Scannen-scherm. Daar zie je de totale opslag zodra die binnen is, het aantal gelezen bestanden en een knop Annuleren. Als de scan klaar is, ga je vanzelf naar het Dashboard. Gaat er iets mis, dan zie je een melding in gewone taal met **Opnieuw proberen**.
+
+**Nog niet getest met een echt account.** Daarvoor is een echt `VITE_CLIENT_ID` nodig. De Graph-laag is wel getest met een nep-`fetch` (`src/graph/graph.test.ts`): token meesturen, wachten bij 429/503, opgeven na 5 pogingen, foutcodes, nextLink volgen, en weigeren van URL's buiten Graph. **Test dit zelf met je eigen account** zodra de app-registratie klaar is.
+
+### Welke bestanden
+
+| Bestand | Wat het doet |
+| --- | --- |
+| `src/graph/client.ts` | `graphGet()`: fetch met token, opnieuw proberen bij 429/503, `GraphFout` bij andere fouten, alleen `graph.microsoft.com`. |
+| `src/graph/drive.ts` | `getQuota()`: `GET /me/drive?$select=quota`. |
+| `src/graph/scan.ts` | `scanDrive()`: delta-pagina's ophalen tot er geen `@odata.nextLink` meer is. |
+| `src/graph/foutmelding.ts` | Scanfouten in gewone taal. |
+| `src/graph/graph.test.ts` | Tests met een nep-fetch. |
+| `src/state/ScanContext.tsx` | `startScan()`, `annuleerScan()`. |
+| `src/pages/Scannen/Scannen.tsx` | Voortgang, Annuleren, foutmeldingen. |
+
+### Hoe het samenwerkt
+
+```
+Privacy: login() klaar -> startScan() -> naar #/scannen
+startScan:
+  1. getQuota()            -> scan.quota      (Scannen toont "Je OneDrive gebruikt ...")
+  2. scanDrive()           -> per pagina: naarBestanden() en scan.gelezen ophogen
+       graphGet(deltaPad)       pagina 1  (value + @odata.nextLink)
+       graphGet(nextLink)       pagina 2  (value + @odata.nextLink)
+       ...                      laatste pagina (value + @odata.deltaLink) -> stop
+  3. status 'klaar'        -> useMemo maakt de Analyse -> Scannen ziet 'klaar' -> naar #/dashboard
+```
+
+**Annuleren** werkt met een `AbortController`. Die geeft een "signaal" mee aan elke `fetch` en aan het wachten bij 429. Roep je `abort()` aan, dan stopt de lopende fetch meteen met een `AbortError`, en het scherm meldt "De scan is geannuleerd".
+
+**Waarom `isActueel()`?** Start iemand een nieuwe scan of kiest hij voorbeelddata terwijl een oude scan nog loopt, dan kan die oude scan nog een antwoord terugmelden. Elke scan krijgt zijn eigen `AbortController`; alleen de scan waarvan de controller nog in de ref staat, mag de state veranderen.
+
+### Drie dingen om zelf te begrijpen
+
+1. **Delta in plaats van map voor map.** `root/delta` geeft in één lange lijst alle bestanden uit alle submappen, verdeeld over pagina's. Map voor map zou per map een extra verzoek kosten.
+2. **429 en Retry-After.** Doe je te veel verzoeken, dan zegt Graph "429 Too Many Requests" en vaak ook hoeveel seconden je moet wachten. Wie toch meteen opnieuw vraagt, wordt langer geblokkeerd. Daarom wachten we netjes.
+3. **Testen zonder netwerk.** `graphGet` gebruikt de echte `fetch`, tenzij je in de opties een `fetchFunctie` meegeeft. De tests geven een nep-fetch mee die vaste antwoorden teruggeeft. Zo test je ook foutgevallen die je in het echt moeilijk kunt opwekken.
+
+### Oefening
+
+Open `src/graph/graph.test.ts` en schrijf een test voor deze situatie: de eerste pagina geeft 503 zonder Retry-After, daarna komt de pagina wel. Hoe vaak is de nep-fetch aangeroepen en met welke wachttijd is `wachtFunctie` aangeroepen? Bedenk het antwoord eerst, en draai dan `npm test`.

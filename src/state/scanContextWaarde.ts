@@ -7,6 +7,8 @@ export interface ScanContextWaarde {
   analyse: Analyse | null; // null zolang de scan niet klaar is
   isVoorbeeld: boolean; // true als we verzonnen voorbeelddata tonen
   laadVoorbeelddata: () => void;
+  startScan: () => void; // scant de echte OneDrive van de ingelogde gebruiker
+  annuleerScan: () => void;
   wisScan: () => void;
 }
 

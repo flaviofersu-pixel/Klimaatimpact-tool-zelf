@@ -45,7 +45,7 @@ export function Privacy() {
   const styles = useStyles();
   const navigate = useNavigate();
   const { kanInloggen, isIngelogd, login } = useAuth();
-  const { laadVoorbeelddata } = useScan();
+  const { laadVoorbeelddata, startScan } = useScan();
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
 
@@ -53,12 +53,14 @@ export function Privacy() {
   async function inloggenEnBerekenen(opnieuw = false) {
     setFout(null);
     if (isIngelogd) {
+      startScan();
       navigate('/scannen');
       return;
     }
     setBezig(true);
     try {
       await login(opnieuw);
+      startScan();
       navigate('/scannen');
     } catch (error) {
       if (isAfgebrokenPoging(error)) {
