@@ -1,5 +1,6 @@
 // Hash-routes: één route per scherm. Met # in de URL werkt de app ook als statische site en in Teams.
 import { createHashRouter } from 'react-router';
+import { AppLayout } from './components/AppLayout';
 import { Welkom } from './pages/Welkom/Welkom';
 import { Privacy } from './pages/Privacy/Privacy';
 import { Scannen } from './pages/Scannen/Scannen';
@@ -11,13 +12,19 @@ import { Opruimen } from './pages/Opruimen/Opruimen';
 import { Resultaat } from './pages/Resultaat/Resultaat';
 
 export const router = createHashRouter([
-  { path: '/', element: <Welkom /> },
-  { path: '/privacy', element: <Privacy /> },
-  { path: '/scannen', element: <Scannen /> },
-  { path: '/dashboard', element: <Dashboard /> },
-  { path: '/zo-rekenen-we', element: <ZoRekenenWe /> },
-  { path: '/grootste-bestanden', element: <GrootsteBestanden /> },
-  { path: '/per-map', element: <PerMap /> },
-  { path: '/opruimen', element: <Opruimen /> },
-  { path: '/resultaat', element: <Resultaat /> },
+  {
+    // AppLayout tekent de kopbalk; het gekozen scherm komt op de plek van <Outlet />
+    element: <AppLayout />,
+    children: [
+      { path: '/', element: <Welkom /> },
+      { path: '/privacy', element: <Privacy /> },
+      { path: '/scannen', element: <Scannen /> },
+      { path: '/dashboard', element: <Dashboard /> },
+      { path: '/zo-rekenen-we', element: <ZoRekenenWe /> },
+      { path: '/grootste-bestanden', element: <GrootsteBestanden /> },
+      { path: '/per-map', element: <PerMap /> },
+      { path: '/opruimen', element: <Opruimen /> },
+      { path: '/resultaat', element: <Resultaat /> },
+    ],
+  },
 ]);

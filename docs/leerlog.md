@@ -114,3 +114,69 @@ Keuzes die je moet kennen:
 ### Oefening
 
 Zet in `config.ts` het aantal kopieën op 3 en draai `npm test`. Welke test faalt, en waarom faalt de controletest níet? Zet de waarde daarna terug.
+
+---
+
+## Fase 3: Voorbeelddata en de inzichtschermen
+
+### Plan
+
+De ontwerpen in `docs/ontwerp/` ontbreken nog. Ik bouw de schermen daarom met standaard Fluent UI-onderdelen en de beschrijving uit CLAUDE.md.
+
+1. `src/demo/voorbeeldData.ts`: ongeveer 300 verzonnen DriveItems (vaste "willekeur", dus elke keer dezelfde lijst), plus een paar mappen en een verwijderd item om te laten zien dat die worden overgeslagen.
+2. `src/state/`: `scanContextWaarde.ts` (de context), `ScanContext.tsx` (de provider met `laadVoorbeelddata()`), `useScan.ts` (de hook voor schermen). Drie bestanden, omdat React-tools willen dat een bestand met een component alleen componenten exporteert.
+3. `src/components/`: `AppLayout.tsx` (kopbalk, melding voorbeelddata, het scherm), `Kopbalk.tsx`, `ImpactKaart.tsx`, `LeeftijdKaart.tsx`, `BestandenTabel.tsx`, `GeenScan.tsx`, `charts/SoortenGrafiek.tsx`.
+4. Schermen: Welkom (knop "Bekijk met voorbeelddata"), Dashboard, Zo rekenen we, Grootste bestanden en soorten, Bestanden per map.
+5. `routes.tsx`: alle schermen binnen `AppLayout`.
+
+### Wat er gebouwd is
+
+Je kunt de tool nu bekijken zonder in te loggen. Klik op het welkomstscherm op **Bekijk met voorbeelddata**: je komt op het Dashboard met 286 verzonnen bestanden. Bovenaan elk scherm staat een oranje melding dat het voorbeelddata is. Via de kopbalk ga je naar Grootste bestanden, Per map en Zo rekenen we.
+
+### Welke bestanden
+
+| Bestand | Wat het doet |
+| --- | --- |
+| `src/demo/voorbeeldData.ts` | Maakt de verzonnen DriveItems, plus mappen en een verwijderd item. |
+| `src/state/scanContextWaarde.ts` | Beschrijft wat er in de context zit en maakt de context aan. |
+| `src/state/ScanContext.tsx` | `ScanProvider`: bewaart het scanresultaat in `useState` en rekent met `useMemo` de analyse uit. |
+| `src/state/useScan.ts` | `useScan()`: hiermee haalt een scherm de gegevens op. |
+| `src/components/AppLayout.tsx` | Kopbalk + melding voorbeelddata + `<Outlet />` (de plek voor het scherm). |
+| `src/components/Kopbalk.tsx` | Naam van de tool en navigatie (alleen zichtbaar als er gegevens zijn). |
+| `src/components/ImpactKaart.tsx` | Grootte, kWh en CO₂ als "van ... tot ...". |
+| `src/components/LeeftijdKaart.tsx` | De drie leeftijdsgroepen met een balk. |
+| `src/components/GroepenTabel.tsx` | Tabel voor groepen (gebruikt voor soorten én voor mappen, daarom in `components/`). |
+| `src/components/BestandenTabel.tsx` | Tabel met losse bestanden. |
+| `src/components/GeenScan.tsx` | Melding als iemand een scherm opent zonder gegevens (bijvoorbeeld na verversen). |
+| `src/components/charts/SoortenGrafiek.tsx` | Recharts-staafgrafiek, met een verborgen tekst voor schermlezers. |
+| `src/pages/...` | Welkom, Dashboard, Zo rekenen we, Grootste bestanden, Per map. |
+
+Ook aangepast: `src/model/opmaak.ts`. Heel kleine getallen werden "0"; nu tonen we twee betekenisvolle cijfers, en onder 0,001 de woorden "bijna 0". De factoren op "Zo rekenen we" komen ongerond op het scherm (PUE 1,185 en niet 1,2).
+
+### Hoe het samenwerkt
+
+```
+App
+└─ FluentProvider (thema)
+   └─ ScanProvider (scan + analyse in het geheugen)
+      └─ RouterProvider
+         └─ AppLayout (Kopbalk, melding)
+            └─ het scherm van de huidige URL  -> useScan() -> analyse
+```
+
+1. De knop op Welkom roept `laadVoorbeelddata()` aan.
+2. Die maakt DriveItems, zet ze om met `naarBestanden()` en zet het resultaat met `setScan()` in de state.
+3. React tekent alles opnieuw. `useMemo` ziet een nieuw `scan` en roept `maakAnalyse()` aan.
+4. Elk scherm leest met `useScan()` de `analyse` en toont die.
+
+Ververs je de pagina (F5), dan is alles weg. Dat is de bedoeling: we bewaren niets (harde regel 3).
+
+### Drie dingen om zelf te begrijpen
+
+1. **Context.** Zonder context zou je de analyse van `App` via props naar elk scherm moeten doorgeven. Een context is een "kanaal" waar elk onderdeel binnen de provider op kan inschakelen met `useScan()`.
+2. **`useMemo`.** De analyse uitrekenen kost tijd bij duizenden bestanden. `useMemo` onthoudt de uitkomst en rekent alleen opnieuw als `scan` of `scanMoment` verandert.
+3. **Vaste "willekeur".** `maakWillekeur(2026)` geeft elke keer dezelfde reeks getallen. Daardoor ziet de demo er bij iedereen hetzelfde uit en kun je er een test op schrijven (`voorbeeldData.test.ts`).
+
+### Oefening
+
+Voeg in `voorbeeldData.ts` een sjabloon toe voor een nieuwe map `/Podcasts` met 5 `.mp3`-bestanden van 30 tot 80 MB. Bij welke soort komen ze terecht op het scherm Grootste bestanden, en waarom? Wat moet je veranderen om ze bij een eigen soort "Audio" te laten horen?

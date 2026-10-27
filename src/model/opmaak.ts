@@ -2,17 +2,27 @@
 import type { Bandbreedte } from './types';
 
 const EENHEDEN = ['bytes', 'kB', 'MB', 'GB', 'TB'];
+const GRENS_BIJNA_NUL = 0.001;
 
-// Een getal met Nederlandse komma. Kleine getallen krijgen meer cijfers achter de komma.
+// Een afgerond getal met Nederlandse komma.
 export function formatGetal(getal: number): string {
-  let decimalen = 1;
-  if (getal !== 0 && Math.abs(getal) < 1) {
-    decimalen = 2;
+  if (getal === 0) {
+    return '0';
   }
-  if (getal !== 0 && Math.abs(getal) < 0.01) {
-    decimalen = 3;
+  // Heel kleine getallen zijn op het scherm niet zinvol; dan zeggen we het in gewone taal.
+  if (Math.abs(getal) < GRENS_BIJNA_NUL) {
+    return 'bijna 0';
   }
-  return getal.toLocaleString('nl-NL', { maximumFractionDigits: decimalen });
+  // Onder de 1 tonen we twee "betekenisvolle" cijfers, zodat 0,0003 niet als 0 op het scherm komt.
+  if (Math.abs(getal) < 1) {
+    return getal.toLocaleString('nl-NL', { maximumSignificantDigits: 2 });
+  }
+  return getal.toLocaleString('nl-NL', { maximumFractionDigits: 1 });
+}
+
+// Een getal precies zoals het is, zonder afronden (voor de factoren van het rekenmodel).
+export function formatExact(getal: number): string {
+  return getal.toLocaleString('nl-NL', { maximumFractionDigits: 10 });
 }
 
 // Bytes decimaal (1 kB = 1000 bytes), net als het rekenmodel.
@@ -30,6 +40,10 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatBandbreedte(bandbreedte: Bandbreedte, eenheid: string): string {
+  // Zijn laag en hoog allebei heel klein, dan is "van bijna 0 tot bijna 0" overbodig.
+  if (Math.abs(bandbreedte.hoog) < GRENS_BIJNA_NUL) {
+    return `bijna 0 ${eenheid}`;
+  }
   return `van ${formatGetal(bandbreedte.laag)} tot ${formatGetal(bandbreedte.hoog)} ${eenheid}`;
 }
 
