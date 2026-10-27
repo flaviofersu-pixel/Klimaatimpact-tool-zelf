@@ -1,6 +1,7 @@
-// Balk bovenaan elk scherm: naam van de tool en, na een scan, de navigatie naar de inzichtschermen.
-import { makeStyles, Text, tokens } from '@fluentui/react-components';
-import { NavLink } from 'react-router';
+// Balk bovenaan elk scherm: naam van de tool, navigatie na een scan, en de ingelogde gebruiker met Uitloggen.
+import { Button, makeStyles, shorthands, Text, tokens } from '@fluentui/react-components';
+import { NavLink, useNavigate } from 'react-router';
+import { useAuth } from '../auth/useAuth';
 import { useScan } from '../state/useScan';
 
 const useStyles = makeStyles({
@@ -34,6 +35,17 @@ const useStyles = makeStyles({
     // NavLink zet aria-current="page" op de link van het huidige scherm
     '&[aria-current="page"]': { borderBottomColor: tokens.colorNeutralForegroundOnBrand },
   },
+  gebruiker: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    marginLeft: 'auto', // naar rechts
+  },
+  uitloggen: {
+    color: tokens.colorNeutralForegroundOnBrand,
+    ...shorthands.borderColor(tokens.colorNeutralForegroundOnBrand),
+    backgroundColor: 'transparent',
+  },
 });
 
 const SCHERMEN = [
@@ -45,7 +57,19 @@ const SCHERMEN = [
 
 export function Kopbalk() {
   const styles = useStyles();
-  const { analyse } = useScan();
+  const navigate = useNavigate();
+  const { analyse, wisScan } = useScan();
+  const { isIngelogd, naam, logout } = useAuth();
+
+  async function uitloggen() {
+    wisScan(); // eerst de gegevens uit het geheugen halen
+    navigate('/');
+    try {
+      await logout();
+    } catch {
+      // Sluit iemand het uitlogvenster, dan blijft het account in dit tabblad bewaard. Niet erg.
+    }
+  }
 
   return (
     <header className={styles.balk}>
@@ -60,6 +84,14 @@ export function Kopbalk() {
             </NavLink>
           ))}
         </nav>
+      )}
+      {isIngelogd && (
+        <div className={styles.gebruiker}>
+          <Text>{naam}</Text>
+          <Button size="small" appearance="outline" className={styles.uitloggen} onClick={uitloggen}>
+            Uitloggen
+          </Button>
+        </div>
       )}
     </header>
   );

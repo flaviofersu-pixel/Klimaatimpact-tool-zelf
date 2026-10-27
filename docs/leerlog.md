@@ -180,3 +180,86 @@ Ververs je de pagina (F5), dan is alles weg. Dat is de bedoeling: we bewaren nie
 ### Oefening
 
 Voeg in `voorbeeldData.ts` een sjabloon toe voor een nieuwe map `/Podcasts` met 5 `.mp3`-bestanden van 30 tot 80 MB. Bij welke soort komen ze terecht op het scherm Grootste bestanden, en waarom? Wat moet je veranderen om ze bij een eigen soort "Audio" te laten horen?
+
+---
+
+## Fase 4: Inloggen in de browser
+
+### Plan
+
+Belangrijk verschil met oudere voorbeelden: **in MSAL v5 werkt een popup alleen via een "redirect bridge"-pagina.** Microsoft stuurt de popup na het inloggen terug naar die pagina, en die geeft het antwoord door aan het hoofdvenster. Bron: de officiële migratiegids v4 → v5 (`lib/msal-browser/docs/v4-migration.md`).
+
+1. `src/vite-env.d.ts`: TypeScript laten weten dat `VITE_CLIENT_ID` bestaat.
+2. `src/config/env.ts`: client-id, authority, redirect-URI (`/redirect.html`) en scopes. `isClientIdIngesteld` voor de melding als hij ontbreekt.
+3. `redirect.html` + `src/auth/redirect.ts`: de bridge-pagina, die alleen `broadcastResponseToMainFrame()` aanroept. In `vite.config.ts` wordt `redirect.html` een tweede ingang van de build.
+4. `src/auth/msal.ts`: `maakMsalVoorBrowser()` met `createStandardPublicClientApplication`, cache in `sessionStorage`. `maakMsalVoorTeams()` met `createNestablePublicClientApplication` staat klaar, maar wordt nog niet gebruikt.
+5. `src/auth/foutmelding.ts`: MSAL-foutcodes vertalen naar gewone taal (popup geblokkeerd, toestemming geweigerd, geen internet).
+6. `src/auth/useAuth.ts`: inloggen, uitloggen en de naam van de gebruiker. `src/auth/useToken.ts`: eerst stil een token halen, anders met een popup.
+7. `src/auth/AuthProvider.tsx`: zet `MsalProvider` om de app. Zo blijft alle MSAL-code in `src/auth/`, en gebruikt `App.tsx` alleen `AuthProvider`.
+8. `main.tsx`: eerst MSAL starten, daarna de app tonen. Zonder client-id start de app gewoon, met voorbeelddata.
+9. Privacy-scherm met de knop "Inloggen en mijn OneDrive berekenen". Kopbalk met naam en knop Uitloggen.
+
+### Wat er gebouwd is
+
+Inloggen met een Microsoft-account via een popup. Op het Privacy-scherm staat wat de tool wel en niet bekijkt, en de knop **Inloggen en mijn OneDrive berekenen**. Na het inloggen staan je naam en de knop **Uitloggen** rechts in de kopbalk. Het Scannen-scherm is nog leeg (dat komt in fase 5).
+
+Zonder `VITE_CLIENT_ID` start de app gewoon. De inlogknop is dan grijs en een gele melding legt uit wat er ontbreekt. Voorbeelddata werkt altijd.
+
+**Getest in de browser** met een nep-client-id: de popup gaat naar `login.microsoftonline.com/common`, met `redirect_uri=http://localhost:5180/redirect.html` en scopes `User.Read Files.Read` (plus `openid profile offline_access`, die MSAL altijd toevoegt). `localStorage` bleef leeg en er waren geen cookies. Een echte inlogtest kan pas met een echt client-id.
+
+### Actie voor het team: redirect-URI
+
+Zet in de app-registratie (Authentication → Single-page application) als redirect-URI:
+
+```
+http://localhost:5173/redirect.html
+```
+
+Dus **met** `/redirect.html`, niet alleen `http://localhost:5173` zoals in de bouwprompts staat. Reden: MSAL v5 stuurt de popup naar een aparte "bridge"-pagina. Later komt de Static Web Apps-URL erbij, ook met `/redirect.html` erachter.
+
+### Welke bestanden
+
+| Bestand | Wat het doet |
+| --- | --- |
+| `src/config/env.ts` | Client-id, authority (`common`), redirect-URI en scopes op één plek. |
+| `src/vite-env.d.ts` | Vertelt TypeScript dat `import.meta.env.VITE_CLIENT_ID` bestaat. |
+| `redirect.html` + `src/auth/redirect.ts` | De bridge-pagina. Roept alleen `broadcastResponseToMainFrame()` aan. |
+| `vite.config.ts` | Bouwt nu twee pagina's: `index.html` en `redirect.html`. |
+| `src/auth/msal.ts` | Maakt MSAL: `createStandardPublicClientApplication` (browser) en, voor later, `createNestablePublicClientApplication` (Teams). Cache in `sessionStorage`. |
+| `src/auth/AuthProvider.tsx` | Zet `MsalProvider` om de app. |
+| `src/auth/useAuth.ts` | `login()`, `logout()`, `naam`, `isIngelogd`. |
+| `src/auth/useToken.ts` | `useToken()` geeft een functie die een token voor Graph haalt. |
+| `src/auth/foutmelding.ts` | Zet MSAL-foutcodes om in Nederlandse zinnen. Met tests. |
+| `src/main.tsx` | Start MSAL vóórdat de app getekend wordt. |
+| `src/pages/Privacy/Privacy.tsx` | Uitleg en de inlogknop. |
+| `src/components/Kopbalk.tsx` | Naam van de gebruiker en Uitloggen. |
+
+### Hoe het samenwerkt
+
+```
+Klik "Inloggen"  ->  useAuth().login()  ->  MSAL opent popup naar login.microsoftonline.com
+                                                  |
+             gebruiker logt in en geeft toestemming
+                                                  v
+                     Microsoft stuurt de popup naar /redirect.html?code=...
+                                                  |
+             redirect.ts geeft het antwoord via een BroadcastChannel door aan het hoofdvenster
+                                                  v
+           MSAL wisselt de code in voor tokens, bewaart ze in sessionStorage, popup sluit
+                                                  v
+                     login() is klaar  ->  account actief  ->  naar #/scannen
+```
+
+Later (fase 5) roept de scan `useToken()` aan. Die probeert eerst `acquireTokenSilent` (uit de cache of stil vernieuwd). Alleen als Microsoft zegt dat de gebruiker iets moet doen (`InteractionRequiredAuthError`), opent er een popup.
+
+**Een eigenaardigheid van MSAL v5:** MSAL kan niet zien dat iemand de popup sluit (de loginpagina van Microsoft verbreekt de band met het venster). MSAL wacht dan tot de wachttijd om is. Wij zetten die wachttijd op 3 minuten, zodat er tijd is voor tweestapsverificatie. Daarom toont het Privacy-scherm tijdens het wachten de knop **Opnieuw proberen**. Die geeft `overrideInteractionInProgress: true` mee, zodat MSAL de oude poging afbreekt. Dat mag volgens de documentatie alleen na een klik van de gebruiker, nooit automatisch.
+
+### Drie dingen om zelf te begrijpen
+
+1. **Waarom een popup en geen redirect?** Bij een redirect verlaat de hele app de pagina, en dan is alles in het geheugen weg (ook een scan). Een popup laat de app gewoon staan.
+2. **sessionStorage, geen localStorage.** De tokens blijven bewaard zolang het tabblad open is. Sluit je het tabblad, dan ben je uitgelogd. Het scanresultaat bewaren we nergens; de tokens wel, omdat MSAL anders bij elke klik opnieuw zou vragen om in te loggen.
+3. **Alleen `src/auth/` kent MSAL.** Schermen gebruiken `useAuth()` en `useToken()`. Gaat de app later in Teams een andere manier van inloggen gebruiken, dan verandert alleen `src/auth/`.
+
+### Oefening
+
+Open de app zonder `.env` en kijk naar het Privacy-scherm. Maak daarna een `.env` met een verzonnen id, bijvoorbeeld `VITE_CLIENT_ID=11111111-2222-3333-4444-555555555555`, en start `npm run dev` opnieuw. Wat verandert er, en wat laat Microsoft zien als je op Inloggen klikt? Waarom moet je de dev-server opnieuw starten nadat je `.env` hebt aangepast?
