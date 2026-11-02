@@ -15,3 +15,9 @@ export const redirectUri = `${window.location.origin}/redirect.html`;
 
 // Alleen lezen. Nooit Files.Read.All of Sites.* (zie CLAUDE.md).
 export const scopes = ['User.Read', 'Files.Read'];
+
+// Alleen voor het Verplaatsen-scherm (fase 10, oefenfeature). Een uitzondering op de regel hierboven,
+// zie CLAUDE.md. De tool vraagt deze rechten pas als iemand op "Verbinden met SharePoint" klikt.
+//   Team.ReadBasic.All: de teams waar je lid van bent
+//   Files.ReadWrite.All: mappen van die teams lezen, kopiëren naar SharePoint, het origineel in OneDrive verwijderen
+export const scopesVerplaatsen = ['User.Read', 'Team.ReadBasic.All', 'Files.ReadWrite.All'];

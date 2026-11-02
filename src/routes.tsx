@@ -10,6 +10,7 @@ import { GrootsteBestanden } from './pages/GrootsteBestanden/GrootsteBestanden';
 import { PerMap } from './pages/PerMap/PerMap';
 import { Opruimen } from './pages/Opruimen/Opruimen';
 import { Resultaat } from './pages/Resultaat/Resultaat';
+import { Verplaatsen } from './pages/Verplaatsen/Verplaatsen';
 
 export const router = createHashRouter([
   {
@@ -25,6 +26,7 @@ export const router = createHashRouter([
       { path: '/per-map', element: <PerMap /> },
       { path: '/opruimen', element: <Opruimen /> },
       { path: '/resultaat', element: <Resultaat /> },
+      { path: '/verplaatsen', element: <Verplaatsen /> },
     ],
   },
 ]);

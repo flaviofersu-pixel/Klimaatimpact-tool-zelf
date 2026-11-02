@@ -59,6 +59,7 @@ const SCHERMEN = [
   { pad: '/per-map', naam: 'Per map' },
   { pad: '/opruimen', naam: 'Oude bestanden' },
   { pad: '/resultaat', naam: 'Resultaat' },
+  { pad: '/verplaatsen', naam: 'Verplaatsen' },
   { pad: '/zo-rekenen-we', naam: 'Zo rekenen we' },
 ];
 

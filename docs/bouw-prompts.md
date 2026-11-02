@@ -172,3 +172,26 @@ leerafspraken.
 ## Na de laatste fase
 
 Je hebt dan een werkende versie 1 en een leerlog met negen hoofdstukken. Een goede manier om te checken of je het snapt: kies een klein onderdeel, bijvoorbeeld een extra leeftijdsgroep "meer dan 3 jaar", en bouw het zelf zonder Claude. Laat Claude daarna alleen je code nakijken.
+
+---
+
+## Fase 10 (extra): Verplaatsen naar SharePoint
+
+Pas doen als de gemeente `Team.ReadBasic.All` en `Files.ReadWrite.All` heeft goedgekeurd, en de beslissing in CLAUDE.md staat. Lees eerst `docs/verplaatsen-naar-sharepoint.md`.
+
+```
+Lees CLAUDE.md, ook de uitzondering "Verplaatsen naar SharePoint", en docs/verplaatsen-naar-sharepoint.md.
+Bouw een scherm Verplaatsen met twee tabellen naast elkaar: links de eigen OneDrive, rechts de
+SharePoint van een team waar de gebruiker lid van is (keuzelijst). In beide tabellen mappen openen
+en via een kruimelpad terug.
+1. Model: MapItem, Opslagplek, Team, VerplaatsResultaat en pure functies (omzetten, sorteren met
+   mappen eerst, dubbele namen zonder hoofdlettergevoeligheid), met tests.
+2. Graph: graphPost en graphDelete naast graphGet, met dezelfde 429/503-logica. Verplaatsen =
+   naam controleren, kopiëren (202), wachten tot de kopie er staat (geen monitor-URL: die valt
+   buiten graph.microsoft.com), dan pas het origineel verwijderen. Tests met een nep-fetch.
+3. Rechten: scopesVerplaatsen apart, pas vragen na een klik op "Verbinden met SharePoint".
+4. Een OpslagBron-interface met een Graph-versie en een voorbeeldversie in het geheugen.
+5. Slepen van links naar rechts, plus een knop die hetzelfde doet (toegankelijkheid).
+   Een Fluent Dialog met wat er gebeurt, wat er verloren gaat en de bewaarregels.
+Volg de leerafspraken.
+```

@@ -45,6 +45,7 @@ const PAGINATITELS: Record<string, string> = {
   '/per-map': 'Bestanden per map',
   '/opruimen': 'Oude bestanden bekijken',
   '/resultaat': 'Resultaat en tips',
+  '/verplaatsen': 'Verplaatsen naar SharePoint',
 };
 
 export function AppLayout() {

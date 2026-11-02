@@ -462,3 +462,97 @@ Alle negen schermen gemeten: nergens is de pagina breder dan 400 px. De kopbalk 
 ### Oefening
 
 Zet in `src/pages/Dashboard/Dashboard.tsx` tijdelijk de regel `localStorage.setItem('test', 'x');` in de functie `Dashboard` en draai `npm run lint`. Welke melding krijg je, en in welk deel van `eslint.config.js` staat die tekst? Haal de regel daarna weer weg.
+
+---
+
+## Fase 10: Verplaatsen naar SharePoint (oefenfeature)
+
+Wens van de opdrachtgever: links je OneDrive, rechts de SharePoint van je team, en bestanden van links naar rechts slepen. Hier gebouwd om te leren hoe het moet. Wat je voor het echte project moet regelen, staat in `docs/verplaatsen-naar-sharepoint.md`.
+
+### Plan
+
+1. Model: `MapItem`, `Opslagplek`, `Team`, `VerplaatsResultaat`, en pure functies in `model/mappen.ts`, met tests.
+2. Graph: `client.ts` krijgt POST en DELETE. Nieuw: `mappen.ts`, `teams.ts`, `verplaatsen.ts`, met tests die een nep-fetch gebruiken.
+3. Rechten: `scopesVerplaatsen` apart van de gewone scopes, en `useToken()` krijgt de scopes mee.
+4. Een "bron" met een echte versie (Graph) en een voorbeeldversie (geheugen).
+5. Hooks `useMapVenster` en `useVerplaatsen`.
+6. Scherm `pages/Verplaatsen/` met `MapVenster` (twee keer) en `VerplaatsDialoog`.
+7. Uitzondering in CLAUDE.md vastleggen, controle met build, test en lint, en het scherm in de browser bekijken.
+
+### Wat er gebouwd is
+
+Een nieuw scherm **Verplaatsen** (in de kopbalk, na een scan of met voorbeelddata). Je klikt eerst op **Verbinden met SharePoint**. Daarna zie je links je OneDrive en rechts een keuzelijst met je teams. In beide tabellen kun je mappen openen en via het kruimelpad terug. Sleep je een bestand naar rechts, of vink je bestanden aan en klik je op de knop, dan opent een dialoog met:
+
+- welke bestanden waarheen gaan;
+- welke bestanden worden overgeslagen, omdat de naam in de doelmap al bestaat;
+- wat je kwijtraakt (versiegeschiedenis, gedeelde links) en de link naar de bewaarregels.
+
+Na **Verplaatsen** zie je de voortgang en daarna per bestand of het gelukt is. Beide tabellen worden opnieuw opgehaald.
+
+Met voorbeelddata werkt alles in het geheugen: drie verzonnen teams, en `Projectplan Klimaat.docx` staat al in "Team Duurzaamheid › Projecten", zodat je de waarschuwing over dubbele namen ziet. Ververs je de pagina, dan staat alles weer op de oude plek.
+
+**Nog niet getest met een echt account** (er is geen client-id en geen tenant met teams). De Graph-laag is getest met een nep-fetch. Het testplan voor een echte tenant staat in `docs/verplaatsen-naar-sharepoint.md`.
+
+### Welke bestanden
+
+| Bestand | Wat het doet |
+| --- | --- |
+| `src/model/types.ts` | Nieuwe types `MapItem`, `Opslagplek`, `Team`, `VerplaatsResultaat`. |
+| `src/model/mappen.ts` (+ test) | `naarMapItem(s)`, `naarOpslagplek`, `sorteerMapItems` (mappen eerst), `zoekDubbeleNamen`, `grootteVanItems`. |
+| `src/graph/client.ts` | `stuurVerzoek()` doet het echte werk (token, opnieuw proberen bij 429/503). `graphGet`, `graphPost` en `graphDelete` gebruiken die. |
+| `src/graph/mappen.ts` | Hoofdmap van OneDrive of van een team, en de inhoud van één map. |
+| `src/graph/teams.ts` | `haalTeams()`: `/me/joinedTeams`. |
+| `src/graph/verplaatsen.ts` | `verplaatsBestand()`: naam controleren, kopiëren, wachten op de kopie, origineel verwijderen. |
+| `src/graph/foutmelding.ts` | `vertaalMapFout()` en `vertaalVerplaatsFout()`. |
+| `src/graph/graph.test.ts` | Tests voor de nieuwe Graph-functies. |
+| `src/config/env.ts` | `scopesVerplaatsen`. |
+| `src/auth/useToken.ts` | `useToken(gevraagdeScopes)`. |
+| `src/state/opslagBron.ts` | Interface `OpslagBron` en `maakGraphBron()`. |
+| `src/demo/voorbeeldOpslag.ts` (+ test) | `maakVoorbeeldBron()`: verzonnen OneDrive en teams in het geheugen. |
+| `src/state/useMapVenster.ts` | Eén tabel: plek, kruimelpad, inhoud, laden en fout. |
+| `src/state/useVerplaatsen.ts` | Verbinden, team kiezen, verplaatsen met voortgang. |
+| `src/pages/Verplaatsen/Verplaatsen.tsx` | Het scherm. |
+| `src/pages/Verplaatsen/MapVenster.tsx` | Eén tabel, met slepen (links) en loslaten (rechts). |
+| `src/pages/Verplaatsen/VerplaatsDialoog.tsx` | Bevestigen, voortgang en uitkomst. |
+| `src/routes.tsx`, `Kopbalk.tsx`, `AppLayout.tsx` | Route `#/verplaatsen`, link in de kopbalk, paginatitel. |
+| `CLAUDE.md`, `docs/architectuur.md` | De uitzondering op de harde regels, en de opbouw. |
+| `docs/verplaatsen-naar-sharepoint.md` | Wat je voor het echte project moet regelen, en in welke volgorde je bouwt. |
+
+### Hoe het samenwerkt
+
+```
+Klik "Verbinden met SharePoint"
+  useVerplaatsen.verbind()
+    bron.haalOneDrive()        -> linker tabel opent "Mijn OneDrive"
+    bron.haalTeams()           -> keuzelijst rechts
+      (eerste keer echt: popup "deze app wil ... mag dat?" door useToken(scopesVerplaatsen))
+Kies een team
+    bron.haalTeamOpslag(team)  -> rechter tabel opent de SharePoint van het team
+Klik op een map
+    useMapVenster.openMap()    -> pad + 1 stap, bron.haalMapInhoud()
+Sleep een bestand naar rechts (of knop)
+    MapVenster: onDragStart zet het id in dataTransfer; rechts leest onDrop het id
+    Verplaatsen.tsx opent VerplaatsDialoog met dat bestand (of alle aangevinkte)
+Klik "Verplaatsen"
+    useVerplaatsen.verplaats(bestanden)   één voor één:
+      bron.verplaatsBestand()
+        echt:  graph/verplaatsen.ts  GET naam vrij? -> POST copy (202) -> GET ... tot hij er staat -> DELETE origineel
+        demo:  de knoop in de lijst krijgt een nieuwe ouder
+    daarna: beide tabellen herladen, dialoog toont de uitkomst
+```
+
+**De bron.** `OpslagBron` is een lijstje functies (`haalOneDrive`, `haalTeams`, `haalTeamOpslag`, `haalMapInhoud`, `verplaatsBestand`). `maakGraphBron()` en `maakVoorbeeldBron()` hebben precies dezelfde functies. `useVerplaatsen` kiest er één (`isVoorbeeld`) en de rest van de code merkt het verschil niet. Zo konden we het hele scherm bouwen en testen zonder SharePoint.
+
+**Rechten pas als het nodig is.** `useToken(scopesVerplaatsen)` vraagt een token met meer rechten. Heeft de gebruiker daar nog geen toestemming voor gegeven, dan geeft `acquireTokenSilent` een `InteractionRequiredAuthError` en opent `useToken` een popup. Daarom gebeurt het verbinden pas na een klik: een popup zonder klik houdt de browser tegen.
+
+**Waarom eerst kopiëren en dan verwijderen?** Graph kan niet in één keer van de ene drive naar de andere verplaatsen. Kopiëren loopt op de achtergrond (antwoord 202). Wij kijken om de 3 seconden of de kopie in de doelmap staat. Pas als hij er staat, verwijderen we het origineel. Gaat er onderweg iets mis, dan staat het bestand nog in je OneDrive. Het ergste geval is dat het bestand op twee plekken staat, nooit op nul.
+
+### Drie dingen om zelf te begrijpen
+
+1. **Eén interface, twee versies.** Het scherm vraagt "geef me de inhoud van deze map" en het maakt niet uit wie antwoordt. Dat heet programmeren tegen een interface. Het maakt demo's en tests makkelijk, en later kun je er een derde versie bij maken (bijvoorbeeld `Sites.Selected`) zonder het scherm te veranderen.
+2. **De volgorde bij schrijven is veiligheid.** Eerst controleren, dan kopiëren, dan wachten, en als laatste verwijderen. Draai je twee stappen om, dan kun je een bestand kwijtraken. De test `controleert de naam, kopieert, wacht op de kopie en verwijdert dan het origineel` bewaakt die volgorde.
+3. **Slepen in de browser.** `draggable` op de rij, `dataTransfer.setData()` bij het oppakken, `preventDefault()` in `onDragOver` (anders mag je nergens loslaten) en `getData()` bij `onDrop`. Omdat niet iedereen kan slepen, doet een gewone knop precies hetzelfde.
+
+### Oefening
+
+In `src/demo/voorbeeldOpslag.ts` staat `Projectplan Klimaat.docx` in de OneDrive én in "Team Duurzaamheid › Projecten". Start de app met voorbeelddata en probeer dat bestand naar die map te slepen. Wat zegt de dialoog? Zoek daarna uit welke functie in `src/model/` die waarschuwing bepaalt, en verander de test in `mappen.test.ts` zo dat hij laat zien wat er gebeurt met `PROJECTPLAN KLIMAAT.DOCX`. Voorspel eerst of de test slaagt.

@@ -63,6 +63,9 @@ klimaatimpacttool/
 │   │   ├── drive.ts             # getQuota()
 │   │   ├── scan.ts              # scanDrive() met delta en voortgang
 │   │   ├── opruimen.ts          # deleteItem(): enige plek met schrijfrecht (zie open beslissing)
+│   │   ├── mappen.ts            # fase 10: hoofdmap en inhoud van één map
+│   │   ├── teams.ts             # fase 10: de teams van de gebruiker
+│   │   ├── verplaatsen.ts       # fase 10: kopiëren naar SharePoint, dan origineel naar de prullenbak
 │   │   └── types.ts             # DriveItem, Quota
 │   ├── model/
 │   │   ├── types.ts             # Bestand, Impact, Analyse, Groep, Bandbreedte, ...
@@ -82,7 +85,8 @@ klimaatimpacttool/
 │   │   ├── GrootsteBestanden/   # 6 grootste bestanden en soorten
 │   │   ├── PerMap/              # 7 bestanden per map
 │   │   ├── Opruimen/            # 8 oude bestanden, met BevestigDialoog.tsx (9, Fluent Dialog)
-│   │   └── Resultaat/           # 10 resultaat en tips
+│   │   ├── Resultaat/           # 10 resultaat en tips
+│   │   └── Verplaatsen/         # 11 (fase 10) OneDrive en SharePoint naast elkaar, met MapVenster en VerplaatsDialoog
 │   ├── components/
 │   │   ├── Kopbalk.tsx
 │   │   ├── ImpactKaart.tsx
@@ -214,7 +218,7 @@ Controletest (`rekenmodel.test.ts`): met de oude HvA-factoren (10 W, 2 kopieën,
 - Volg `@odata.nextLink` tot die er niet meer is. Toon voortgang na elke pagina.
 - Bij status 429 of 503: wacht het aantal seconden uit `Retry-After` en probeer opnieuw.
 - Mappen worden geen `Bestand`; tel alleen items met `file`.
-- Scopes bij inloggen: `User.Read`, `Files.Read`. Nooit `Files.Read.All` of `Sites.*`.
+- Scopes bij inloggen: `User.Read`, `Files.Read`. Nooit `Files.Read.All` of `Sites.*`. Enige uitzondering: het Verplaatsen-scherm (zie hieronder).
 
 ## Inloggen
 
@@ -227,6 +231,17 @@ Controletest (`rekenmodel.test.ts`): met de oude HvA-factoren (10 W, 2 kopieën,
 ## Open beslissing: verwijderen vanuit de tool
 
 Nog niet besloten of versie 1 zelf bestanden verwijdert (vraagt `Files.ReadWrite`) of alleen een link "Openen in OneDrive" toont (alleen `Files.Read`). Tot die keuze: maak `graph/opruimen.ts` aan als stub met een TODO en vraag `Files.ReadWrite` nergens aan.
+
+## Uitzondering: Verplaatsen naar SharePoint (fase 10, oefenfeature)
+
+Wens van de opdrachtgever: twee tabellen naast elkaar (links je OneDrive, rechts de SharePoint van je team) en bestanden van links naar rechts slepen. In **dit oefenproject** gebouwd om te leren hoe het moet. In het echte project pas bouwen als de gemeente de rechten heeft goedgekeurd (zie `docs/verplaatsen-naar-sharepoint.md`).
+
+Alleen voor deze feature gelden andere regels:
+
+- Scopes `Team.ReadBasic.All` en `Files.ReadWrite.All` (staan in `scopesVerplaatsen` in `config/env.ts`). Ze worden pas gevraagd als iemand op "Verbinden met SharePoint" klikt. De rest van de tool blijft `User.Read` en `Files.Read` gebruiken.
+- `graph/verplaatsen.ts` mag schrijven: kopiëren naar SharePoint en daarna het origineel verwijderen (naar de prullenbak), alleen na bevestigen in `VerplaatsDialoog`.
+- Alleen metadata, net als de scan. Geen inhoud lezen, geen deelgegevens.
+- Alleen van OneDrive naar SharePoint, alleen bestanden (geen mappen), nooit overschrijven.
 
 ## Scripts
 

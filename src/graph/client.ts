@@ -81,8 +81,27 @@ function isAnnulering(fout: unknown): boolean {
   return fout instanceof DOMException && fout.name === 'AbortError';
 }
 
-// Doet een GET-verzoek naar Graph en geeft de JSON terug.
-export async function graphGet<T>(padOfUrl: string, opties: GraphOpties): Promise<T> {
+type Methode = 'GET' | 'POST' | 'DELETE';
+
+// Maakt de opties voor fetch. Alleen bij POST sturen we JSON mee.
+function maakVerzoek(methode: Methode, token: string, body: unknown, signal?: AbortSignal): RequestInit {
+  if (methode === 'GET') {
+    return { headers: { Authorization: `Bearer ${token}` }, signal };
+  }
+  if (methode === 'DELETE') {
+    return { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }, signal };
+  }
+  return {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  };
+}
+
+// Stuurt één verzoek naar Graph en geeft het antwoord terug als het gelukt is (status 2xx).
+// Wacht bij 429 en 503 en probeert opnieuw. Bij andere fouten: een GraphFout.
+async function stuurVerzoek(methode: Methode, padOfUrl: string, body: unknown, opties: GraphOpties): Promise<Response> {
   const url = maakUrl(padOfUrl);
   const doeFetch = opties.fetchFunctie ?? fetch;
   const wachtEven = opties.wachtFunctie ?? wacht;
@@ -92,10 +111,7 @@ export async function graphGet<T>(padOfUrl: string, opties: GraphOpties): Promis
 
     let antwoord: Response;
     try {
-      antwoord = await doeFetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: opties.signal,
-      });
+      antwoord = await doeFetch(url, maakVerzoek(methode, token, body, opties.signal));
     } catch (fout) {
       if (isAnnulering(fout)) {
         throw fout;
@@ -104,7 +120,7 @@ export async function graphGet<T>(padOfUrl: string, opties: GraphOpties): Promis
     }
 
     if (antwoord.ok) {
-      return (await antwoord.json()) as T;
+      return antwoord;
     }
 
     // Te druk (429) of even niet beschikbaar (503): wachten en opnieuw proberen.
@@ -119,4 +135,20 @@ export async function graphGet<T>(padOfUrl: string, opties: GraphOpties): Promis
 
   // Komt hier niet: de laatste poging geeft altijd een antwoord of een fout.
   throw new GraphFout(429, 'teVaakGeprobeerd');
+}
+
+// Doet een GET-verzoek naar Graph en geeft de JSON terug.
+export async function graphGet<T>(padOfUrl: string, opties: GraphOpties): Promise<T> {
+  const antwoord = await stuurVerzoek('GET', padOfUrl, undefined, opties);
+  return (await antwoord.json()) as T;
+}
+
+// Doet een POST-verzoek met JSON. Het antwoord gebruiken we niet (bij een kopie is dat 202 zonder inhoud).
+export async function graphPost(padOfUrl: string, body: unknown, opties: GraphOpties): Promise<void> {
+  await stuurVerzoek('POST', padOfUrl, body, opties);
+}
+
+// Doet een DELETE-verzoek. In OneDrive gaat het item dan naar de prullenbak (204).
+export async function graphDelete(padOfUrl: string, opties: GraphOpties): Promise<void> {
+  await stuurVerzoek('DELETE', padOfUrl, undefined, opties);
 }

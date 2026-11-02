@@ -6,11 +6,17 @@ export interface DriveItem {
   size?: number; // bytes
   lastModifiedDateTime: string;
   fileSystemInfo?: { createdDateTime?: string; lastModifiedDateTime?: string };
-  parentReference?: { path?: string };
+  parentReference?: { path?: string; driveId?: string }; // driveId alleen bij het verplaatsen (fase 10)
   file?: { mimeType?: string };
   folder?: { childCount?: number };
   webUrl?: string;
   deleted?: { state?: string }; // delta kan verwijderde items teruggeven: overslaan
+}
+
+// Een team uit GET /me/joinedTeams (fase 10).
+export interface GraphTeam {
+  id: string;
+  displayName: string;
 }
 
 export interface Quota {
